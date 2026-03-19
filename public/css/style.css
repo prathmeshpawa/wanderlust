@@ -1,0 +1,97 @@
+body {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+}
+
+main {
+    flex: 1; /* This ensures the footer stays at the bottom */
+}
+
+/* Navbar */
+.navbar {
+    height: 5rem;
+    background-color: white;
+}
+
+
+.fa-compass{
+    color: black;
+    font-size: 2rem;
+}
+
+.nav-link{
+    color: #222222!important;
+}
+
+
+
+/*Footer */
+
+/* Update Footer Styling */
+.f-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: gray; /* Matches the light grey in image 2 */
+    padding: 1.5rem 0;
+    text-align: center;
+    border-top: 1px solid #ddd;
+}
+
+/* Update Show Page Image */
+.show-img {
+    height: 30vh;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 1.5rem !important; /* Matches the rounded look in image 2 */
+}
+
+/* New: Buttons Container */
+.btns {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.show-card{
+    padding-right: 0;
+    padding-left: 0;
+}
+
+
+/*Cards */
+.listing-card {
+    border :none !important;
+    margin-bottom: 2rem;}
+
+.card-img-top{
+      border-radius: 1rem !important;
+      width: 100% !important;
+      object-fit: cover !important;
+}
+
+.card-body {
+   padding: 0 !important;
+}
+
+.card-text p{
+ font-weight: 400 !important;
+}
+
+/*Cards Effect */
+.card-img-overlay{
+    opacity: 0;
+}
+
+
+/*New page */
+.add-btn{
+    background-color: black
+}
+
+/* Show Page */
+.show-img{
+    height: 30vh;
+}

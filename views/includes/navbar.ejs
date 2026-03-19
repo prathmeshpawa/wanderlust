@@ -1,0 +1,206 @@
+<style>
+  .btn-search {
+    color: #fff;
+    background-color: #fe424d;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-left: 6px; 
+    margin-top: 0px;  
+  }
+
+  .btn-search:hover {
+    background-color: #d93b40;
+    color: #fff;
+  }
+ 
+ 
+  
+  #navSearchInput {
+    border-radius: 10px;              
+    border: 2px solid #000000;        
+    padding: 8px 16px;                
+    outline: none;                    
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    transition: all 0.3s ease;        
+    width: 250px;                     
+    font-size: 16px;
+    margin-left: 40px;                   
+  }
+
+  /* Hover effect */
+  #navSearchInput:hover {
+    box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    border-color: #333333;             /* slightly darker black on hover */
+  }
+
+  /* Focus effect */
+  #navSearchInput:focus {
+    box-shadow: 0 0 10px rgba(0,0,0,0.5); /* black glow on focus */
+    border-color: #000000;
+  }
+
+  /* Placeholder styling */
+  #navSearchInput::placeholder {
+    color: #aaa;
+    font-style: italic;
+  }
+</style>
+</style>
+
+
+
+
+
+<nav class="navbar navbar-expand-md border-bottom sticky-top shadow-sm bg-white">
+  <div class="container-fluid">
+<a class="navbar-brand d-flex align-items-center" href="/listings">
+  <i class="fa-solid fa-compass me-2 text-danger"></i>
+  <span class="fw-bold">WanderLust</span>
+</a>
+
+
+    <!-- Toggler -->
+    <button class="navbar-toggler bg-white" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+      aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Collapsible Content -->
+    <div class="collapse navbar-collapse" id="navbarContent">
+      <!-- Left Nav -->
+      <ul class="navbar-nav ms-1 mb-2 mb-md-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/listings">Explore</a>
+        </li>
+      </ul>
+
+      <!-- Search Bar (Center) -->
+      <form id="navSearchForm" class="d-flex mx-auto my-2 my-md-0 w-100 justify-content-center" style="max-width: 400px;" action="/listings" method="GET" role="search">
+        <div class="position-relative w-100">
+          <input class="form-control nav-search" type="search" name="q" id="navSearchInput" placeholder="Search destinations" autocomplete="off" />
+          <ul id="suggestionList" class="list-group position-absolute w-100 shadow-sm"></ul>
+        </div>
+        <button class="btn-search" type="submit">
+         Search
+        </button>
+      </form>
+
+      <!-- Right Nav -->
+      <ul class="navbar-nav ms-auto mt-2 mt-md-0 align-items-md-center text-center text-md-start">
+        <li class="nav-item">
+          <a class="nav-link" href="/listings/new">Airbnb your home</a>
+        </li>
+
+        <% if (!currUser) { %>
+          <li class="nav-item mt-2 mt-md-0">
+            <a class="btn btn-outline-success ms-md-2" href="/signup">Signup</a>
+          </li>
+          <li class="nav-item mt-2 mt-md-0">
+            <a class="btn btn-outline-primary ms-md-2" href="/login">Login</a>
+          </li>
+        <% } %>
+
+        <% if (currUser) { %>
+          <li class="nav-item mt-2 mt-md-0">
+            <a class="btn btn-outline-danger ms-md-2" href="/logout">Logout</a>
+          </li>
+        <% } %>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Autocomplete JS -->
+<script>
+  const searchInput = document.getElementById("navSearchInput");
+  const suggestionList = document.getElementById("suggestionList");
+
+  let debounceTimer;
+  searchInput.addEventListener("input", () => {
+    const query = searchInput.value.trim();
+    clearTimeout(debounceTimer);
+
+    if (!query) {
+      suggestionList.innerHTML = "";
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/search/suggestions?q=${encodeURIComponent(query)}`);
+        const suggestions = await res.json();
+
+        suggestionList.innerHTML = "";
+
+if (suggestions.length === 0) {
+  suggestionList.style.display = "none";
+  return;
+}
+
+suggestionList.style.display = "block";
+
+suggestions.forEach(({ text }) => {
+  const li = document.createElement("li");
+  li.className = "list-group-item list-group-item-action";
+  li.textContent = text;
+  li.style.cursor = "pointer";
+
+  li.addEventListener("click", () => {
+    searchInput.value = text;
+    document.getElementById("navSearchForm").submit();
+  });
+
+  suggestionList.appendChild(li);
+});
+      } catch (err) {
+        console.error("Error fetching suggestions:", err);
+      }
+    }, 300);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#navSearchForm")) {
+      suggestionList.innerHTML = "";
+    }
+  });
+</script>
+
+<!-- Suggestion List Style -->
+<style>
+#suggestionList {
+  max-height: 200px;
+  overflow-y: auto;
+  border: none;             
+  z-index: 1000;
+  background-color: #fff;
+  display: none;            
+}
+
+  @media (max-width: 767.98px) {
+    .navbar-nav .btn {
+      width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+
+    @media (max-width: 767.98px) {
+    .navbar-collapse {
+      background-color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+  }
+  @media (max-width: 767.98px) {
+  .navbar-nav .nav-link {
+    white-space: normal;   /* allow wrapping */
+    font-size: 14px;       /* shrink text slightly */
+  }
+}
+</style>
