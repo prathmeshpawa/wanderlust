@@ -28,7 +28,12 @@ module.exports.signup = async (req, res, next) => {
         });
 
     } catch (e) {
-        req.flash("error", e.message);
+        // Handle database connection errors
+        if (e.message.includes('buffering') || e.name === 'MongooseError') {
+            req.flash("error", "Database is currently unavailable. Please try again later.");
+        } else {
+            req.flash("error", e.message);
+        }
         return res.redirect("/signup");
     }
 };

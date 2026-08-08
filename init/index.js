@@ -1,26 +1,34 @@
+require("dotenv").config();
 const mongoose = require("mongoose");
 const initData = require("./data.js");
 const Listing = require("../models/listing.js");
 
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
-
-main()
-  .then(() => {
-    console.log("connected to DB");
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+const MONGO_URL = process.env.ATLASDB_URL;
 
 async function main() {
-  await mongoose.connect(MONGO_URL);
+  try {
+    await mongoose.connect(MONGO_URL, { maxPoolSize: 10 });
+    console.log("connected to DB ✅");
+    
+    // Delete existing listings
+    await Listing.deleteMany({});
+    console.log("cleared existing listings");
+    
+    // Map owner to each listing
+    const listingsWithOwner = initData.data.map((obj) => ({
+      ...obj, 
+      owner: "696b69a0c92f4d9b1630bbbd"
+    }));
+    
+    // Insert new listings
+    await Listing.insertMany(listingsWithOwner);
+    console.log(`✅ Successfully inserted ${listingsWithOwner.length} listings`);
+    
+    process.exit(0);
+  } catch (err) {
+    console.error("❌ Error:", err.message);
+    process.exit(1);
+  }
 }
 
-const initDB = async () => {
-  await Listing.deleteMany({});
-  initData.data= initData.data.map((obj) => ({...obj, owner:"696b69a0c92f4d9b1630bbbd"}))
-  await Listing.insertMany(initData.data);
-  console.log("data was initialized");
-};
-
-initDB();
+main();

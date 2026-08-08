@@ -4,9 +4,22 @@ maptilerClient.config.apiKey = process.env.MAPTILER_API_KEY;
 const mapToken = process.env.MAPTILER_API_KEY; 
 
 // INDEX
-module.exports.index = async (req, res) => {
-  const allListings = await Listing.find({});
-  res.render("listings/index.ejs", { allListings });
+module.exports.index = async (req, res, next) => {
+  try {
+    console.log('INDEX route - isAuthenticated:', req.isAuthenticated && req.isAuthenticated());
+    console.log('INDEX route - req.user:', req.user && req.user._id);
+    console.log('INDEX route - session passport:', req.session && req.session.passport);
+    const allListings = await Listing.find({});
+    console.log("Found listings:", allListings.length);
+    res.render("listings/index.ejs", { allListings });
+  } catch (err) {
+    console.error("Listings controller error:", err);
+    if (err.name === 'MongooseError' || err.message.includes('buffering')) {
+      req.flash("error", "Database connection unavailable. Please try again later.");
+      return res.render("listings/index.ejs", { allListings: [] });
+    }
+    next(err);
+  }
 };
 
 // NEW FORM
@@ -19,22 +32,30 @@ module.exports.renderNewForm = (req, res) => {
 };
 
 // SHOW LISTING
-module.exports.showListing = async (req, res) => {
-  const { id } = req.params;
+module.exports.showListing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-  const listing = await Listing.findById(id)
-    .populate({
-      path: "reviews",
-      populate: { path: "author" }
-    })
-    .populate("owner");
+    const listing = await Listing.findById(id)
+      .populate({
+        path: "reviews",
+        populate: { path: "author" }
+      })
+      .populate("owner");
 
-  if (!listing) {
-    req.flash("error", "Listing you requested does not exist!");
-    return res.redirect("/listings");
+    if (!listing) {
+      req.flash("error", "Listing you requested does not exist!");
+      return res.redirect("/listings");
+    }
+
+    res.render("listings/show.ejs", { listing, mapToken });
+  } catch (err) {
+    if (err.name === 'MongooseError' || err.message.includes('buffering')) {
+      req.flash("error", "Database connection unavailable. Please try again later.");
+      return res.redirect("/listings");
+    }
+    next(err);
   }
-
-  res.render("listings/show.ejs", { listing, mapToken });
 };
 
 // CREATE LISTING with automatic geometry

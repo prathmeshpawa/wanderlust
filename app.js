@@ -3,13 +3,14 @@ require("dotenv").config({ path: "./.env" });
 console.log("MAP KEY:", process.env.MAPTILER_API_KEY);
 
 const express = require("express");
+const session = require("express-session");
+const MemoryStore = require("memorystore")(session);
 const app = express();
 const mongoose = require("mongoose");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js");
-const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const flash = require("connect-flash");
 const passport = require("passport");
@@ -35,81 +36,101 @@ app.use("/uploads", express.static("uploads"));
 
 // ================= START SERVER AFTER DB =================
 async function startServer() {
+  let dbConnected = false;
+  
   try {
-    await mongoose.connect(dbUrl);
+    await mongoose.connect(dbUrl, {
+      maxPoolSize: 10,
+    });
     console.log("connected to DB ✅");
-
-// ================= SESSION =================
-const store = MongoStore.create({
-  mongoUrl: dbUrl,
-  crypto: {
-    secret: process.env.SECRET,
-  },
-  touchAfter: 24 * 3600,
-});
-
-store.on("error", (err) => {
-  console.log("SESSION STORE ERROR ", err);
-});
-
-const sessionOptions = {
-  store,
-  secret:  process.env.SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    httpOnly: true,
-  },
-};
-
-app.use(session(sessionOptions));
-app.use(flash());
-
-    // ================= PASSPORT =================
-    app.use(passport.initialize());
-    app.use(passport.session());
-
-    passport.use(new LocalStrategy(User.authenticate()));
-    passport.serializeUser(User.serializeUser());
-    passport.deserializeUser(User.deserializeUser());
-
-    // ================= GLOBAL LOCALS =================
-    app.use((req, res, next) => {
-      res.locals.success = req.flash("success");
-      res.locals.error = req.flash("error");
-      res.locals.currUser = req.user;
-      next();
-    });
-
-    // ================= ROUTES =================
-    app.use("/listings", listingRouter);
-    app.use("/listings/:id/reviews", reviewRouter);
-    app.use("/", userRouter);
-
-    // ================= 404 =================
-    app.use((req, res, next) => {
-      next(new ExpressError(404, "Page Not Found"));
-    });
-
-    // ================= ERROR HANDLER =================
-    app.use((err, req, res, next) => {
-      if (res.headersSent) {
-        return next(err);
-      }
-      const { statusCode = 500, message = "Something went wrong!" } = err;
-      res.status(statusCode).render("error", { message });
-    });
-
-    // ================= SERVER =================
-    app.listen(8080, () => {
-      console.log("server is listening to port 8080 🚀");
-    });
-
+    dbConnected = true;
   } catch (err) {
-    console.log("DB CONNECTION ERROR ", err);
+    console.log("DB CONNECTION ERROR:");
+    console.log("Error Message:", err.message);
+    console.log("Error Code:", err.code);
+    console.log("Connection String (first 50 chars):", dbUrl.substring(0, 50) + "...");
+    console.log("Using MemoryStore instead");
   }
+
+  // ================= SESSION =================
+  let store;
+  
+  if (dbConnected) {
+    try {
+      store = await MongoStore.create({
+        mongoUrl: dbUrl,
+        touchAfter: 24 * 3600,
+      });
+      console.log("Using MongoStore for sessions");
+    } catch (err) {
+      console.log("MongoStore creation failed, using MemoryStore");
+      store = new MemoryStore();
+    }
+  } else {
+    store = new MemoryStore();
+  }
+
+  if (store.on) {
+    store.on("error", (err) => {
+      console.log("SESSION STORE ERROR ", err);
+    });
+  }
+
+  const sessionOptions = {
+    name: "wonder.sid",
+    store,
+    secret: process.env.SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    },
+  };
+
+  app.use(session(sessionOptions));
+  app.use(flash());
+
+  // ================= PASSPORT =================
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(new LocalStrategy(User.authenticate()));
+  passport.serializeUser(User.serializeUser());
+  passport.deserializeUser(User.deserializeUser());
+
+  // ================= GLOBAL LOCALS =================
+  app.use((req, res, next) => {
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    res.locals.currUser = req.user;
+    next();
+  });
+
+  // ================= ROUTES =================
+  app.use("/listings", listingRouter);
+  app.use("/listings/:id/reviews", reviewRouter);
+  app.use("/", userRouter);
+
+  // ================= 404 =================
+  app.use((req, res, next) => {
+    next(new ExpressError(404, "Page Not Found"));
+  });
+
+  // ================= ERROR HANDLER =================
+  app.use((err, req, res, next) => {
+    if (res.headersSent) {
+      return next(err);
+    }
+    const { statusCode = 500, message = "Something went wrong!" } = err;
+    res.status(statusCode).render("error", { message });
+  });
+
+  // ================= SERVER =================
+  app.listen(8080, () => {
+    console.log("server is listening to port 8080 🚀");
+  });
 }
 
 startServer();
