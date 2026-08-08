@@ -128,9 +128,10 @@ async function startServer() {
   });
 
   // ================= SERVER =================
-  app.listen(8080, () => {
-    console.log("server is listening to port 8080 🚀");
+ const port = process.env.PORT || 8080;
+
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`Server is running on port ${port}`);
   });
 }
-
 startServer();
